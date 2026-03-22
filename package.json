@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "hono": "^4.12.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "wrangler": "^4.76.0"
+  }
+}

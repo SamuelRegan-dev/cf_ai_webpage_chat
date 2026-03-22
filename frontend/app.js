@@ -1,0 +1,1 @@
+//i didnt want to make a build step for compiling ts so i just made this js
