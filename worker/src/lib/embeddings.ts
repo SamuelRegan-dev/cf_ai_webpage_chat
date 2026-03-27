@@ -4,7 +4,10 @@
 * Runs all embedding requests concurrently for performance
 * Used during ingestion to populate the embeddings table
 */
-import { embedText } from './embedText';
+export async function embedText(text: string, env: any): Promise<number[]> {
+    const { data } = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text })
+    return data[0]
+}
 
 export async function embedChunks(chunks: string[], env: any): Promise<{ chunk: string, vector: number[] }[]> {
    return await Promise.all(
