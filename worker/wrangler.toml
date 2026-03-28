@@ -1,11 +1,11 @@
 name = "cf-ai-webpage-chat"
 main = "src/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2025-01-01"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "webpage-chat-db"
-database_id =  "ff2ec742-2417-4528-9ed0-b9ab85e8c5be"
+database_id = "ff2ec742-2417-4528-9ed0-b9ab85e8c5be"
 
 [[vectorize]]
 binding = "VECTORIZE"
@@ -14,12 +14,19 @@ remote = true
 
 [ai]
 binding = "AI"
-remote= true
+remote = true
 
 [[workflows]]
 binding = "INGEST_WORKFLOW"
 name = "ingest-workflow"
 class_name = "IngestWorkflow"
+
+[durable_objects]
+bindings = [{ name = "SESSION_DO", class_name = "SessionDO" }]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SessionDO"]
 
 [assets]
 directory = "../frontend"

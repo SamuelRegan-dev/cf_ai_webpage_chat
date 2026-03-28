@@ -16,6 +16,7 @@ export async function runRAGPipeline(userPrompt: string, sessionID: string, env:
     console.log("3. found chunkIds:", chunkIds)
     const chunks = await fetchChunkText(chunkIds, env);
     console.log("4. fetched chunks:", chunks?.length)
+    console.log("chunk content:", chunks)
     const prompt = buildPrompt(userPrompt, chunks);
     console.log("5. built prompt")
     const response = await callLLM(prompt, env);

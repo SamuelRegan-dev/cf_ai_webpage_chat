@@ -1,5 +1,10 @@
-// Generates sessionID for the backend, passes URL to the ingestion pipeline
-const sessionID = crypto.randomUUID();
+// Manages session state, URL ingestion via Cloudflare Workflows, and RAG chat
+const sessionID = sessionStorage.getItem('sessionID') || crypto.randomUUID();
+sessionStorage.setItem('sessionID', sessionID);
+
+const BASE_URL = window.location.hostname === '127.0.0.1'
+    ? ''
+    : 'https://cf-ai-webpage-chat.cf-ai-sregan.workers.dev';
 
 const urlBar       = document.getElementById('url-bar');
 const urlInput     = document.getElementById('urlInput');
@@ -18,6 +23,16 @@ let ingestedUrls = [];
 let hasIngested  = false;
 let isWaiting    = false;
 
+const storedUrls = JSON.parse(sessionStorage.getItem('ingestedUrls') || '[]');
+storedUrls.forEach(url => addToSidebar(url));
+if (storedUrls.length > 0) {
+    hasIngested = true;
+    enableChat();
+    urlBar.classList.add('hidden');
+    app.classList.add('no-bar');
+    addUrlBtn.classList.add('visible');
+}
+
 ingestBtn.addEventListener('click', async () => {
     const url = urlInput.value.trim();
     if (!url) return;
@@ -26,41 +41,61 @@ ingestBtn.addEventListener('click', async () => {
     ingestStatus.textContent = 'Ingesting…';
 
     try {
-        await fetch("https://cf-ai-webpage-chat.cf-ai-sregan.workers.dev/ingest", {
+        const res = await fetch(`${BASE_URL}/ingest`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ url, sessionID }),
         });
 
+        const data = await res.json();
+
         if (res.ok) {
-            ingestStatus.textContent = '✓ Done';
+            const workflowId = data.workflowId;
             addToSidebar(url);
             urlInput.value = '';
 
-            // fold away bar after first ingest
-            if (!hasIngested) {
-                hasIngested = true;
-                setTimeout(() => {
-                    urlBar.classList.add('hidden');
-                    app.classList.add('no-bar');
-                    addUrlBtn.classList.add('visible');
-                    enableChat();
-                }, 800);
-            } else {
-                setTimeout(() => {
-                    urlBar.classList.add('hidden');
-                    app.classList.add('no-bar');
-                    ingestStatus.textContent = '';
-                }, 800);
-            }
-        } else {
-            ingestStatus.textContent = '✗ Failed';
+            document.getElementById('progress-bar').classList.add('active');
+            const poll = setInterval(async () => {
+                const statusRes = await fetch(`${BASE_URL}/status/${workflowId}`);
+                const { status } = await statusRes.json();
+
+                if (status === 'complete') {
+                    clearInterval(poll);
+                    document.getElementById('progress-bar').classList.remove('active');
+                    ingestStatus.textContent = '✓ Done';
+                    if (!hasIngested) {
+                        hasIngested = true;
+                        setTimeout(() => {
+                            urlBar.classList.add('hidden');
+                            app.classList.add('no-bar');
+                            addUrlBtn.classList.add('visible');
+                            enableChat();
+                        }, 800);
+                    } else {
+                        setTimeout(() => {
+                            urlBar.classList.add('hidden');
+                            app.classList.add('no-bar');
+                            ingestStatus.textContent = '';
+                        }, 800);
+                    }
+                } else if (status === 'errored') {
+                    clearInterval(poll);
+                    document.getElementById('progress-bar').classList.remove('active');
+                    ingestStatus.textContent = '✗ Failed';
+                } else {
+                    ingestStatus.textContent = '⏳ Ingesting…';
+                }
+            }, 2000);
         }
     } catch {
         ingestStatus.textContent = '✗ Error';
     } finally {
         ingestBtn.disabled = false;
     }
+});
+
+window.addEventListener('beforeunload', () => {
+    navigator.sendBeacon(`${BASE_URL}/session/delete`, new Blob([JSON.stringify({ sessionID })], { type: 'application/json' }));
 });
 
 addUrlBtn.addEventListener('click', () => {
@@ -72,8 +107,16 @@ addUrlBtn.addEventListener('click', () => {
 });
 
 function addToSidebar(url) {
-    sidebarEmpty.style.display = 'none';
+    if (ingestedUrls.includes(url)) return;
     ingestedUrls.push(url);
+
+    const stored = JSON.parse(sessionStorage.getItem('ingestedUrls') || '[]');
+    if (!stored.includes(url)) {
+        stored.push(url);
+        sessionStorage.setItem('ingestedUrls', JSON.stringify(stored));
+    }
+
+    sidebarEmpty.style.display = 'none';
 
     let domain = url;
     try { domain = new URL(url).hostname.replace('www.', ''); } catch {}
@@ -110,18 +153,13 @@ async function sendMessage() {
     const typing = appendTyping();
 
     try {
-        await fetch("https://cf-ai-webpage-chat.cf-ai-sregan.workers.dev/chat", {
+        const res = await fetch(`${BASE_URL}/chat`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userPrompt, sessionID }),
+            body: JSON.stringify({ userPrompt: text, sessionID }),
         });
 
         const data = await res.json();
-        if (data.warning) {
-            document.getElementById('status').textContent = '${data.warning}';
-        } else {
-            document.getElementById('status').textContent = 'Ingestion successful!';
-        }
         typing.remove();
         appendMessage('ai', data.response ?? 'No response.');
     } catch {
