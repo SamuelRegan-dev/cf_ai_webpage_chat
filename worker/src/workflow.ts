@@ -21,39 +21,51 @@ interface Env {
 export class IngestWorkflow extends WorkflowEntrypoint<Env, { url: string, sessionID: string }> {
     async run(event: WorkflowEvent<{ url: string, sessionID: string }>, step: WorkflowStep) {
 
-        const { chunks, pageID } = await step.do('fetch and extract', async () => {
-            const pageID = crypto.randomUUID()
-            const response = await fetch(event.payload.url, {
-                headers: { 'User-Agent': 'Mozilla/5.0 (compatible; cf-ai-webpage-chat/1.0)' }
-            })
-            const html = await response.text()
-            const { text } = await extractText(event.payload.url, html)
-            const chunks = chunkText(text).filter((c: string) => c.trim().length > 0).slice(0, 50)
-            return { chunks, pageID }
+        const { chunks, pageID } = await step.do('fetch and extract v9', async () => {
+            try {
+                const pageID = crypto.randomUUID()
+                const response = await fetch(event.payload.url, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; cf-ai-webpage-chat/1.0)' }
+                })
+                const html = await response.text()
+                const { text } = await extractText(event.payload.url, html)
+                const chunks = chunkText(text).filter((c: string) => c.trim().length > 20).slice(0, 50)
+
+                console.log("chunks count:", chunks.length)
+                return { chunks, pageID }
+            } catch (e) {
+                console.log("error in fetch step:", e)
+                throw e
+            }
         })
 
-        await step.do('store in D1 and Vectorize', async () => {
-            const existing = await this.env.DB.prepare(
-                'SELECT id FROM pages WHERE url = ? AND session_id = ?'
-            ).bind(event.payload.url, event.payload.sessionID).first()
+        await step.do('store in D1 and Vectorize v9', async () => {
+            try {
+                const existing = await this.env.DB.prepare(
+                    'SELECT id FROM pages WHERE url = ? AND session_id = ?'
+                ).bind(event.payload.url, event.payload.sessionID).first()
 
-            if (existing) return
+                if (existing) return
 
-            await this.env.DB.prepare('INSERT INTO pages (id, session_id, url) VALUES (?, ?, ?)')
-                .bind(pageID, event.payload.sessionID, event.payload.url)
-                .run()
+                await this.env.DB.prepare('INSERT INTO pages (id, session_id, url) VALUES (?, ?, ?)')
+                    .bind(pageID, event.payload.sessionID, event.payload.url)
+                    .run()
 
-            const embeddings = await embedChunks(chunks, this.env)
+                const embeddings = await embedChunks(chunks, this.env)
 
-            await Promise.all(
-                embeddings.map(async ({ chunk, vector }: { chunk: string, vector: number[] }) => {
-                    const chunkId = crypto.randomUUID()
-                    await this.env.DB.prepare(
-                        'INSERT INTO chunks (id, page_id, chunk_text, vector_id) VALUES (?, ?, ?, ?)'
-                    ).bind(chunkId, pageID, chunk, chunkId).run()
-                    await this.env.VECTORIZE.upsert([{ id: chunkId, values: vector }])
-                })
-            )
+                await Promise.all(
+                    embeddings.map(async ({ chunk, vector }: { chunk: string, vector: number[] }) => {
+                        const chunkId = crypto.randomUUID()
+                        await this.env.DB.prepare(
+                            'INSERT INTO chunks (id, page_id, chunk_text, vector_id) VALUES (?, ?, ?, ?)'
+                        ).bind(chunkId, pageID, chunk, chunkId).run()
+                        await this.env.VECTORIZE.upsert([{ id: chunkId, values: vector }])
+                    })
+                )
+            } catch (e) {
+                console.log("error in store step:", e)
+                throw e
+            }
         })
     }
 }

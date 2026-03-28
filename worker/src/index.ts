@@ -46,21 +46,6 @@ app.post('/chat', async (c) => {
     return handleChat(c, c.env)
 })
 
-app.post('/session/delete', async (c) => {
-    const { sessionID } = await c.req.json()
-    if (!sessionID) return c.json({ error: 'sessionID required' }, { status: 400 })
-
-    const id = c.env.SESSION_DO.idFromName(sessionID)
-    const stub = c.env.SESSION_DO.get(id)
-    await stub.fetch('https://do/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionID })
-    })
-
-    return c.json({ success: true })
-})
-
 app.get('/status/:workflowId', async (c) => {
     const instance = await c.env.INGEST_WORKFLOW.get(c.req.param('workflowId'))
     const status = await instance.status()

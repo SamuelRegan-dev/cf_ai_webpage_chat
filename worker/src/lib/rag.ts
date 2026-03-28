@@ -44,8 +44,13 @@ async function fetchChunkText(chunkIds: string[], env: any): Promise<string[]> {
 }
 
 function buildPrompt(userPrompt: string, chunks: string[]): string {
-    const context = chunks.join('\n\n');
-    return `You are a helpful assistant. Use the context below to answer the question.
+    const MAX_CONTEXT_CHARS = 2000;
+    let context = '';
+    for (const chunk of chunks) {
+        if ((context + chunk).length > MAX_CONTEXT_CHARS) break;
+        context += chunk + '\n\n';
+    }
+    return `You are a helpful assistant. Use the context below to answer the question. Be concise.
 
 Context:
 ${context}
@@ -55,7 +60,8 @@ Question: ${userPrompt}`;
 
 async function callLLM(prompt: string, env: any): Promise<string> {
     const result = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
-        messages: [{ role: 'user', content: prompt }]
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 512
     });
     return result.response ?? '';
 }

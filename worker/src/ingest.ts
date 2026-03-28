@@ -5,9 +5,7 @@
  */
 
 export async function handleIngest(c: any, env: any) {
-    console.log("ingest hit")
     const { url, sessionID } = await c.req.json()
-    console.log("url:", url, "sessionID:", sessionID)
 
     if (!sessionID) return c.json({ error: 'Unauthorized' }, { status: 401 })
     if (!url) return c.json({ error: 'url is required' }, { status: 400 })
