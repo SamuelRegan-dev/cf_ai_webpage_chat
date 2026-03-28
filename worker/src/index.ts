@@ -2,6 +2,7 @@
 //handles endpoints for ingestions, chat logic and cleanup logic via hono
 import { Hono } from 'hono'
 import { handleIngest } from './ingest'
+import { handleChat } from './chat'
 export { IngestWorkflow } from './workflow'
 
 interface Env {
@@ -12,8 +13,18 @@ interface Env {
 }
 
 const app = new Hono<{ Bindings: Env }>()
-app.post("/chat", async(c)=> {
-    return c.json({response: 'placeholder'})
+
+app.use('*', async (c, next) => {
+    await next();
+    c.res.headers.set('Access-Control-Allow-Origin', 'https://cf-ai-webpage-chat.pages.dev');
+    c.res.headers.set('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+    c.res.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+});
+
+app.options('*', (c) => new Response(null, { status: 204 }));
+
+app.post("/chat", async (c) => {
+    return handleChat(c, c.env)
 })
 
 app.delete("/session", async(c)=> {

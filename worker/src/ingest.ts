@@ -17,16 +17,16 @@ export async function handleIngest(c: any, env: any) {
     const pageID = crypto.randomUUID()
     if (!sessionID) return c.json({ error: 'Unauthorized' }, { status: 401 });
 
-
     if (!url || !sessionID) {
         return c.json({ error: 'url and pageID are required' }, { status: 400 });
     }
 
     const response = await fetch(url);
-    const text = await response.text()
+    const html = await response.text();
+    const { text, warning } = await extractText(url, html);
 
-    const chunks = chunkText(text);
-    const embeddings = await embedChunks(chunks, env)
+    const chunks = chunkText(text).filter(chunk => chunk.trim().length > 0);
+    const embeddings = await embedChunks(chunks, env);
 
     await env.DB.prepare('INSERT INTO pages (id, session_id, url) VALUES (?, ?, ?)')
         .bind(pageID, sessionID, url)
@@ -43,5 +43,48 @@ export async function handleIngest(c: any, env: any) {
     )
 
 
-    return c.json({ success: true, chunksStored: chunks.length });
+    return c.json({ success: true, chunksStored: chunks.length, warning });
+}
+
+async function extractText(url: string, html: string): Promise<{ text: string, warning?: string }> {
+    const chunks: string[] = [];
+    let warning: string | undefined;
+
+    const getSelectors = (url: string): string | null => {
+        if (url.includes('wikipedia.org')) {
+            return '#mw-content-text p, #mw-content-text h2, #mw-content-text h3, #mw-content-text li';
+        }
+        if (url.includes('github.com')) {
+            return 'article p, .markdown-body p, .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body li, .markdown-body td';
+        }
+        if (url.includes('developers.cloudflare.com') || url.includes('docs.')) {
+            return 'article p, .content p, main p, h1, h2, h3, li';
+        }
+        return null;
+    };
+
+    const selectors = getSelectors(url);
+
+    if (selectors) {
+        await new HTMLRewriter()
+            .on(selectors, {
+                text(text) {
+                    if (text.text.trim()) chunks.push(text.text.trim());
+                }
+            })
+            .transform(new Response(html))
+            .text();
+    } else {
+        warning = 'This page type is not fully supported. Extraction may be incomplete or inaccurate.';
+        await new HTMLRewriter()
+            .on('p, h1, h2, h3, h4, h5, h6, li', {
+                text(text) {
+                    if (text.text.trim()) chunks.push(text.text.trim());
+                }
+            })
+            .transform(new Response(html))
+            .text();
+    }
+
+    return { text: chunks.join(' '), warning };
 }

@@ -2,13 +2,59 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webpage Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <p>Ingest a URL:</p>
-    <input type="text" id="urlInput" placeholder="Enter URL" />
-    <button id="submitBtn">Submit</button>
 
-    <script src="app.js"></script>
+<!-- URL Bar -->
+<div id="url-bar">
+    <input type="text" id="urlInput" placeholder="https://example.com/page-to-chat-with" />
+    <span id="ingest-status"></span>
+    <button id="ingest-btn">Ingest</button>
+</div>
+
+<!-- Add URL button (shown after first ingest) -->
+<button id="add-url-btn">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    Add URL
+</button>
+
+<div id="app">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+        <div id="sidebar-header">Ingested Pages</div>
+        <div id="url-list">
+            <div id="sidebar-empty">No pages ingested yet.</div>
+        </div>
+    </aside>
+
+    <!-- Chat -->
+    <main id="chat-area">
+        <div id="messages">
+            <div id="empty-state">
+                <div class="arrow">↑</div>
+                <div class="hint">Ingest a URL above to start chatting</div>
+            </div>
+        </div>
+        <div id="chat-input-wrap">
+            <div id="chat-form">
+                <textarea id="chat-input" placeholder="Ask something about the ingested pages…" rows="1" disabled></textarea>
+                <button id="send-btn" disabled>
+                    <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2 14L14 8 2 2v4.5l8 1.5-8 1.5z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>
