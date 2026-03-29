@@ -4,7 +4,7 @@ A RAG-powered chat application that lets you have a conversation with any webpag
 
 ## Live demo
 
-[https://cf-ai-webpage-chat.pages.dev](https://cf-ai-webpage-chat.pages.dev)
+[https://cf-ai-webpage-chat.cf-ai-sregan.workers.dev](https://cf-ai-webpage-chat.cf-ai-sregan.workers.dev)
 
 ## What it does
 
