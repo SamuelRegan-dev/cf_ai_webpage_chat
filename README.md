@@ -2,6 +2,10 @@
 
 A RAG-powered chat application that lets you have a conversation with any webpage. Built entirely on Cloudflare's developer platform.
 
+## Live demo
+
+[https://cf-ai-webpage-chat.pages.dev](https://cf-ai-webpage-chat.pages.dev)
+
 ## What it does
 
 Paste a URL, the app fetches and indexes the page content, and you can then ask questions about it. Responses are grounded in the actual page content via retrieval-augmented generation rather than the LLM's training data.
