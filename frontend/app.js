@@ -39,24 +39,23 @@ ingestBtn.addEventListener('click', async () => {
 
     ingestBtn.disabled = true;
     ingestStatus.textContent = 'Ingesting…';
+    document.getElementById('progress-bar').classList.add('active');
 
     try {
         const res = await fetch(`${BASE_URL}/ingest`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url, sessionID }),
         });
 
         const data = await res.json();
 
         if (res.ok) {
-            const workflowId = data.workflowId;
             addToSidebar(url);
             urlInput.value = '';
 
-            document.getElementById('progress-bar').classList.add('active');
             const poll = setInterval(async () => {
-                const statusRes = await fetch(`${BASE_URL}/status/${workflowId}`);
+                const statusRes = await fetch(`${BASE_URL}/status/${data.workflowId}`);
                 const { status } = await statusRes.json();
 
                 if (status === 'complete') {
@@ -86,16 +85,16 @@ ingestBtn.addEventListener('click', async () => {
                     ingestStatus.textContent = '⏳ Ingesting…';
                 }
             }, 2000);
+        } else {
+            document.getElementById('progress-bar').classList.remove('active');
+            ingestStatus.textContent = '✗ Failed';
         }
     } catch {
+        document.getElementById('progress-bar').classList.remove('active');
         ingestStatus.textContent = '✗ Error';
     } finally {
         ingestBtn.disabled = false;
     }
-});
-
-window.addEventListener('beforeunload', () => {
-    navigator.sendBeacon(`${BASE_URL}/session/delete`, new Blob([JSON.stringify({ sessionID })], { type: 'application/json' }));
 });
 
 addUrlBtn.addEventListener('click', () => {
@@ -154,8 +153,8 @@ async function sendMessage() {
 
     try {
         const res = await fetch(`${BASE_URL}/chat`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userPrompt: text, sessionID }),
         });
 
