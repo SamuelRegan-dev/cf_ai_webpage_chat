@@ -3,7 +3,7 @@
  * Ingest Workflow
  * Fetch URL, extract text via HTMLRewriter, chunk into segments
  * Embed chunks via Workers AI, store in D1, Vectorize
- * Each step is checkpointed — on failure, execution resumes from the last successful step
+ * Each step is checkpointed; on failure, execution resumes from the last successful step
  */
 
 import { WorkflowEntrypoint, WorkflowStep, WorkflowEvent } from 'cloudflare:workers'

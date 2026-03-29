@@ -1,3 +1,7 @@
+// SessionDO tracks active sessions via /touch calls from ingest and chat routes
+// Intended to support alarm-based session cleanup in future
+// removed to preserve vectorize index warmth which degrades when vectors are deleted between sessions
+
 import { DurableObject } from 'cloudflare:workers'
 
 export class SessionDO extends DurableObject {
